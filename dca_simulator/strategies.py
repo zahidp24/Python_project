@@ -1,4 +1,6 @@
 import pandas as pd
+from .metrics import compute_roi, compute_cagr
+
 
 def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
     """Double Down Dollar-Cost Averaging (DD_DCA): Investing monthly_contrib, 
@@ -35,24 +37,20 @@ def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
         monthly_investments.loc[date, 'portf_value'] = shares_total * row['Close']
 
 
-    ##Performance measures
     #Profit/Loss
     monthly_investments['profit_loss'] = monthly_investments['portf_value'] - monthly_investments['invested_total']
     
-
-    final_value = monthly_investments["portf_value"].iloc[-1]
+    final_value = monthly_investments["portf_value"].iloc[-1] #used for metrics calc
     final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    #Return on Investment (ROI)
-    ROI = (final_value/final_invested - 1)*100
+    start_date = monthly_investments.index[0]
+    end_date = monthly_investments.index[-1]
 
-    #Cumilative Annual Growth Rate (CAGR)
-    years = (monthly_investments.index[-1] - monthly_investments.index[0]).days/365 
-    CAGR = ((final_value/final_invested)**(1/years) - 1)*100
-    
+    ROI = compute_roi(final_value, final_invested)
+    CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
+
     print(f"ROI: {ROI:.2f}%")
     print(f"CAGR: {CAGR:.2f}%")
-
     return monthly_investments
 
     
@@ -82,23 +80,17 @@ def dca_standard(df, monthly_contrib: float):
         monthly_investments.loc[date, 'portf_value'] = shares_total * row['Close']
 
 
-    ##Performance measures
     #Profit/Loss
     monthly_investments['profit_loss'] = monthly_investments['portf_value'] - monthly_investments['invested_total']
     
-
     final_value = monthly_investments["portf_value"].iloc[-1]
     final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    #Return on Investment (ROI)
-    ROI = (final_value/final_invested - 1)*100
+    start_date = monthly_investments.index[0]
+    end_date = monthly_investments.index[-1]
 
-    #Cumilative Annual Growth Rate (CAGR)
-    years = (monthly_investments.index[-1] - monthly_investments.index[0]).days/365 
-    CAGR = ((final_value/final_invested)**(1/years) - 1)*100
-    
+    ROI = compute_roi(final_value, final_invested)
+    CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
     print(f"ROI: {ROI:.2f}%")
     print(f"CAGR: {CAGR:.2f}%")
-    
-
     return monthly_investments
