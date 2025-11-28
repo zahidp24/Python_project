@@ -1,5 +1,6 @@
 import pandas as pd
-from .metrics import compute_roi, compute_cagr
+from .metrics import compute_roi
+####, compute_cagr
 
 
 def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
@@ -43,14 +44,14 @@ def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
     final_value = monthly_investments["portf_value"].iloc[-1] #used for metrics calc
     final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    start_date = monthly_investments.index[0]
-    end_date = monthly_investments.index[-1]
+    ####start_date = monthly_investments.index[0]
+    ####end_date = monthly_investments.index[-1]
 
     ROI = compute_roi(final_value, final_invested)
-    CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
+    ####CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
 
     print(f"ROI: {ROI:.2f}%")
-    print(f"CAGR: {CAGR:.2f}%")
+    ####print(f"CAGR: {CAGR:.2f}%")
     return monthly_investments
 
     
@@ -86,11 +87,40 @@ def dca_standard(df, monthly_contrib: float):
     final_value = monthly_investments["portf_value"].iloc[-1]
     final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    start_date = monthly_investments.index[0]
-    end_date = monthly_investments.index[-1]
+    ####start_date = monthly_investments.index[0]
+    #####end_date = monthly_investments.index[-1]
 
     ROI = compute_roi(final_value, final_invested)
-    CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
+    ####CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
     print(f"ROI: {ROI:.2f}%")
-    print(f"CAGR: {CAGR:.2f}%")
+    ####print(f"CAGR: {CAGR:.2f}%")
+    return monthly_investments
+
+
+
+def lump_sum(df, monthly_contrib: float):
+    "Lump Sum investment strategy: invest all money at the beginning date"
+    "monthly_contrib is used as to calculate the total amount that should be invested as a lump sum to be comparable to the Normal DCA"
+
+    df = df.copy()
+    monthly_investments = df.resample("MS").first()
+
+    total_months = len(monthly_investments)
+    total_capital = total_months*monthly_contrib #so that the strategy uses the same amount of capital as Normal DCA
+    
+    first_price = monthly_investments.loc[monthly_investments.index[0], "Close"]
+    
+    shares_total = total_capital/first_price
+
+    
+    monthly_investments["shares_total"] = shares_total
+    monthly_investments["invested_total"] = total_capital
+    monthly_investments["portf_value"] = shares_total*monthly_investments["Close"]
+    monthly_investments["profit_loss"] = (monthly_investments["portf_value"] - total_capital)
+
+    final_value = monthly_investments["portf_value"].iloc[-1]
+    final_invested = monthly_investments["invested_total"].iloc[-1]
+
+    ROI = compute_roi(final_value, final_invested)
+    print(f"ROI: {ROI:.2f}%")
     return monthly_investments
