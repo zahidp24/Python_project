@@ -1,6 +1,4 @@
 import pandas as pd
-from .metrics import compute_roi
-####, compute_cagr
 
 
 def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
@@ -14,7 +12,7 @@ def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
     df["drawdown"] = df["Close"]/df["12m_high"]
     df["DD_cond"] = df["drawdown"] <= (1-DD_threshold) #This is True when the stock is >=20% down from 12m_high
 
-    ####df = df.dropna(subset=["12m_high"]).copy() #because the 1y rolling high will be NaN for the first year
+    
 
     monthly_investments = df.resample("MS").first() #because if we specify an exact date manually it could be a non-trading day
     #we buy at the first trading day of each month
@@ -41,17 +39,7 @@ def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
     #Profit/Loss
     monthly_investments['profit_loss'] = monthly_investments['portf_value'] - monthly_investments['invested_total']
     
-    final_value = monthly_investments["portf_value"].iloc[-1] #used for metrics calc
-    final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    ####start_date = monthly_investments.index[0]
-    ####end_date = monthly_investments.index[-1]
-
-    ROI = compute_roi(final_value, final_invested)
-    ####CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
-
-    print(f"ROI: {ROI:.2f}%")
-    ####print(f"CAGR: {CAGR:.2f}%")
     return monthly_investments
 
     
@@ -84,16 +72,7 @@ def dca_standard(df, monthly_contrib: float):
     #Profit/Loss
     monthly_investments['profit_loss'] = monthly_investments['portf_value'] - monthly_investments['invested_total']
     
-    final_value = monthly_investments["portf_value"].iloc[-1]
-    final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    ####start_date = monthly_investments.index[0]
-    #####end_date = monthly_investments.index[-1]
-
-    ROI = compute_roi(final_value, final_invested)
-    ####CAGR = compute_cagr(final_value, final_invested, start_date, end_date)
-    print(f"ROI: {ROI:.2f}%")
-    ####print(f"CAGR: {CAGR:.2f}%")
     return monthly_investments
 
 
@@ -118,9 +97,69 @@ def lump_sum(df, monthly_contrib: float):
     monthly_investments["portf_value"] = shares_total*monthly_investments["Close"]
     monthly_investments["profit_loss"] = (monthly_investments["portf_value"] - total_capital)
 
-    final_value = monthly_investments["portf_value"].iloc[-1]
-    final_invested = monthly_investments["invested_total"].iloc[-1]
 
-    ROI = compute_roi(final_value, final_invested)
-    print(f"ROI: {ROI:.2f}%")
     return monthly_investments
+
+
+
+def dca_sma(df, monthly_contrib: float, sma_period: int = 200):
+    """Simple Moving Average DCA
+    Invest an amount (monthly_contrib) only when the price is above the X-day Simple Moving Average"""
+
+    df = df.copy()
+    df["sma"] = df["Close"].rolling(sma_period).mean()
+    df["above_sma"] = df["Close"] > df["sma"]
+
+    monthly_investments = df.resample("MS").first()
+    monthly_investments["above_sma"] = df["above_sma"].resample("MS").first()
+
+    shares_total = 0
+    invested_total = 0
+
+    for date, row in monthly_investments.iterrows():
+        if row["above_sma"] == True:
+            shares_bought = monthly_contrib/row["Close"]
+            shares_total += shares_bought
+            invested_total += monthly_contrib
+
+        monthly_investments.loc[date, "shares_total"] = shares_total
+        monthly_investments.loc[date, "invested_total"] = invested_total
+        monthly_investments.loc[date, "portf_value"] = shares_total*row["Close"]
+    
+    monthly_investments["profit_loss"] = monthly_investments["portf_value"] - monthly_investments["invested_total"]
+
+
+    return monthly_investments
+
+
+
+def value_averaging(df, goal_monthly_growth: float=0.006, monthly_contrib = 1000):
+    """Value Averaging: portfolio attempts to grow at a constant rate (~0.6%/month = 7.44%/year),
+    Invest when below the goal, do not invest when above"""
+
+    df = df.copy()
+    monthly_investments = df.resample("MS").first()
+
+    shares_total = 0
+    invested_total = 0
+
+    for i, (date, row) in enumerate(monthly_investments.iterrows()):
+        goal_val = monthly_contrib*(1+goal_monthly_growth)**i
+        current_val = shares_total * row["Close"]
+
+        investment_this_month = max(goal_val - current_val, 0) #we invest if we are behind target and do nothing if we are on track/ahead
+
+        if investment_this_month > 0:
+            shares_bought = investment_this_month / row["Close"]
+            shares_total += shares_bought
+            invested_total += investment_this_month
+        
+        monthly_investments.loc[date, "shares_total"] = shares_total
+        monthly_investments.loc[date, "invested_total"] = invested_total
+        monthly_investments.loc[date, "portf_value"] = shares_total*row["Close"]
+
+    monthly_investments["profit_loss"] = monthly_investments["portf_value"] - monthly_investments["invested_total"]
+
+
+    return monthly_investments
+        

@@ -12,3 +12,6 @@ def load_price_data(ticker: str, start_date: str, end_date: str):
 
     df = df[["Close"]]
     return df #'Close' is already adjusted for div. and stock splits
+
+
+
