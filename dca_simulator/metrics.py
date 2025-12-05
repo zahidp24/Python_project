@@ -3,7 +3,7 @@ import numpy as np
 import numpy_financial as npf
 
 def compute_KeyMetrics(df):
-    """Computes all Key Metrics at once"""
+    """Computes all Key Metrics at once""" ######improve descrip
 
     final_value = df["portf_value"].iloc[-1]
     final_invested = df["invested_total"].iloc[-1]

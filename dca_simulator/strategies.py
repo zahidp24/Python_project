@@ -102,13 +102,13 @@ def lump_sum(df, monthly_contrib: float):
 
 
 
-def dca_sma(df, monthly_contrib: float, sma_period: int = 90):
+def dca_sma_mom(df, monthly_contrib: float, sma_period: int = 90):
     """Simple Moving Average DCA
-    Invest an amount (monthly_contrib) only when the price is above the X-day Simple Moving Average"""
+    Invest an amount (monthly_contrib) only when the price is above the X-day Simple Moving Average, investing in momentum"""
 
     df = df.copy()
     df["sma"] = df["Close"].rolling(sma_period).mean()
-    df["above_sma"] = df["Close"] > df["sma"]
+    df["above_sma"] = df["Close"] > df["sma"] #we invest during uptrends, when momentum is high
 
     monthly_investments = df.resample("MS").first()
     monthly_investments["above_sma"] = df["above_sma"].resample("MS").first()
@@ -133,6 +133,35 @@ def dca_sma(df, monthly_contrib: float, sma_period: int = 90):
 
 
 
+def dca_sma_mean_rev(df, monthly_contrib: float, sma_period: int = 90):
+    """Simple Moving Average DCA
+    Invest an amount (monthly_contrib) only when the price is above the X-day Simple Moving Average"""
+
+    df = df.copy()
+    df["sma"] = df["Close"].rolling(sma_period).mean()
+    df["above_sma"] = df["Close"] < df["sma"] #negative exposure to momentum (mean reversion)
+    monthly_investments = df.resample("MS").first()
+    monthly_investments["above_sma"] = df["above_sma"].resample("MS").first() ########do we actually need those two lines
+
+    shares_total = 0
+    invested_total = 0
+
+    for date, row in monthly_investments.iterrows():
+        if row["above_sma"] == True:
+            shares_bought = monthly_contrib/row["Close"]
+            shares_total += shares_bought
+            invested_total += monthly_contrib
+
+        monthly_investments.loc[date, "shares_total"] = shares_total
+        monthly_investments.loc[date, "invested_total"] = invested_total
+        monthly_investments.loc[date, "portf_value"] = shares_total*row["Close"]
+    
+    monthly_investments["profit_loss"] = monthly_investments["portf_value"] - monthly_investments["invested_total"]
+
+
+    return monthly_investments
+
+
 def value_averaging(df, goal_monthly_growth: float=0.006, monthly_contrib = 1000):
     """Value Averaging: portfolio attempts to grow at a constant rate (~0.6%/month = 7.44%/year),
     Invest when below the goal, do not invest when above"""
@@ -144,7 +173,7 @@ def value_averaging(df, goal_monthly_growth: float=0.006, monthly_contrib = 1000
     invested_total = 0
 
     for i, (date, row) in enumerate(monthly_investments.iterrows()):
-        goal_val = monthly_contrib*(1+goal_monthly_growth)**i
+        goal_val = monthly_contrib*(1+i)*(1+goal_monthly_growth)**i
         current_val = shares_total * row["Close"]
 
         investment_this_month = max(goal_val - current_val, 0) #we invest if we are behind target and do nothing if we are on track/ahead
