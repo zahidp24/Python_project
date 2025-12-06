@@ -1,9 +1,11 @@
 import panel as pn
 import pandas as pd
+import datetime as dt
 pn.extension()
 import hvplot.pandas
 import holoviews as hv
 from bokeh.models import HoverTool
+from bokeh.models import NumeralTickFormatter
 
 from dca_simulator.data_loader import load_price_data
 from dca_simulator.strategies import (dca_standard, dca_DD, lump_sum, dca_sma_mom, dca_sma_mean_rev, value_averaging)
@@ -13,13 +15,13 @@ from dca_simulator.metrics import compute_KeyMetrics
 
 
 
-#Widgets
+###Widgets###
 ##text box for ticker
 ticker = pn.widgets.TextInput(name="Ticker", value="AAPL", width=150)
 
 ##date picker
 start_date = pn.widgets.DatePicker(name="Start Date", value=pd.to_datetime("2010-01-01"))
-end_date = pn.widgets.DatePicker(name="End Date", value=pd.to_datetime("2025-01-01"))
+end_date = pn.widgets.DatePicker(name="End Date", value=dt.date.today())
 
 ##sliders for strategy parameters
 monthly_contrib = pn.widgets.IntSlider(name="Monthly Contribution ($)", start=50, end=1000, step=50, value=150)
@@ -39,18 +41,35 @@ strategy_selector = pn.widgets.CheckBoxGroup(name="Strategies",
                                                        value=["DCA"],
                                                        inline=False)
 
+
+##plot variable options
+plot_var_options = {
+    "Portfolio Value ($)": "portf_value",
+    "Total Invested ($)": "invested_total",
+    "Accumulated Shares": "shares_total",
+    "Profit/Loss ($)": "profit_loss"
+}
+
 ##dropdown for var plotting
 plot_var = pn.widgets.Select(name="Variable to plot",
-                             options=["portf_value", "invested_total", "shares_total", "profit_loss"],
-                             value="portf_value")
+                             options=list(plot_var_options.keys()),
+                             value="Portfolio Value ($)")
 
 ##run button
 run_button = pn.widgets.Button(name="Run Simulation", button_type="primary")
 
 
+##labels (used to display several variables such as portf_total, invested_total, etc.)
+var_labels = {
+    "portf_value": "Portfolio Value ($)",
+    "invested_total": "Total Invested ($)",
+    "shares_total": "Accumulated Shares",
+    "profit_loss": "Profit/Loss ($)"}
 
 
-#Output
+
+
+###Output###
 ##preview
 preview_pane = pn.pane.HoloViews(None, sizing_mode="stretch_width", height=350)
 
@@ -87,12 +106,13 @@ template.servable()
 
 
 
+###Simulation func###
 def run_simulation(simulation):
     """Run the simulation with the specified parameters from the "Run Simulation" button"""
 
     selected_ticker = ticker.value
     selected_strategies = strategy_selector.value
-    selected_var = plot_var.value
+    selected_var = plot_var_options[plot_var.value]
     start = start_date.value
     end = end_date.value
     monthly_c = monthly_contrib.value
@@ -100,19 +120,24 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-    #Data loading
+    ##Data loading
     try:    
         df = load_price_data(selected_ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
 
+        if df is None or df.empty:
+            raise ValueError(f"No data found for ticker '{selected_ticker}'.")
+        
         preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_ticker} Price History', responsive=True)
     
 
     except Exception as e:
-        plot_pane.object = f"**Error loading the data:** {str(e)}"
-        
+        preview_pane.object = pn.pane.Markdown(f"**Error loading the data:** {str(e)}")
+        plot_pane.object = None
+        metrics_pane.object = None
+        return
 
 
-    #Strategies
+    ##Strategies
     results = {}
 
     for strat in selected_strategies:
@@ -137,15 +162,25 @@ def run_simulation(simulation):
 
 
 
-    #Plotting
-    if len(results) == 0: ######this doesnt work
-        plot_pane.object = "**No strategies were selected**"
-        return
-    
+    ##Plotting
     plots = []
 
+
+
+    def format_axis(plot, element):
+        """Format y-axis to show $ sign and commas for money variables """
+        fmt="$0,0" if selected_var in ["portf_value", "invested_total", "profit_loss"] else "0,0"
+        plot.state.yaxis.formatter = NumeralTickFormatter(format=fmt)
+
+
+
     for name, df_result in results.items():
-        curve = df_result.hvplot(y=selected_var, label=name, height=350, responsive=True)
+        curve = df_result.hvplot(y=selected_var, 
+                                 ylabel=var_labels[selected_var], 
+                                 label=name, #legend label
+                                 title=f"{var_labels[selected_var]} over Time",
+                                 height=350, 
+                                 responsive=True).opts(hooks=[format_axis]) #format y-axis to financial notation
         plots.append(curve)
 
     interact_plot = plots[0]
@@ -156,7 +191,7 @@ def run_simulation(simulation):
 
 
 
-    #Key Metrics table
+    ##Key Metrics table
     metrics_list = []
 
     for name, df_result in results.items():
@@ -173,5 +208,5 @@ def run_simulation(simulation):
 
 
 
-#connecting button with run_simulation
+##connecting button with run_simulation
 run_button.on_click(run_simulation)
