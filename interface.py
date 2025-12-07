@@ -15,7 +15,7 @@ from dca_simulator.metrics import compute_KeyMetrics
 
 
 
-###Widgets###
+####Widgets####
 ##text box for ticker
 ticker = pn.widgets.TextInput(name="Ticker", value="AAPL", width=150)
 
@@ -29,6 +29,11 @@ growth_slider = pn.widgets.FloatSlider(name="Desired Monthly Growth rate (SMA)",
 sma_period_slider = pn.widgets.IntSlider(name="SMA period", start=10, end=300, step=10, value=90)
 DD_treshold_slider = pn.widgets.FloatSlider(name="Double Down Treshold", start=0.05, end=0.6, step=0.05, value=0.15)
 
+growth_slider.visible = False #because we only want them to appear when the relevant strategy is selected
+sma_period_slider.visible = False
+DD_treshold_slider.visible = False 
+
+
 
 ##box checker for strategy selection
 strategy_selector = pn.widgets.CheckBoxGroup(name="Strategies", 
@@ -38,9 +43,19 @@ strategy_selector = pn.widgets.CheckBoxGroup(name="Strategies",
                                                        "Simple Moving Average DCA - Momentum",
                                                        "Simple Moving Average DCA - Mean Reversion",
                                                        "Value Averaging"],
-                                                       value=["DCA"],
-                                                       inline=False)
+                                                        inline=False)
 
+#info icons
+strategy_info = {
+    "DCA": "Dollar-Cost Averaging: invest a fixed amount every month regardless of price",
+    "Double Down DCA": "Double Down DCA: invest double the amount when the price drops more than a specified treshold",
+    "Lump Sum": "Lump Sum: invest the entire amount at the start date",
+    "Simple Moving Average DCA - Momentum": "invest only when the price is above the X-day Simple Moving Average, investing in momentum",
+    "Simple Moving Average DCA - Mean Reversion": "invest only when the price is below the X-day Simple Moving Average, investing in mean reversion",
+    "Value Averaging": "portfolio attempts to grow at a constant rate, investing more when behind target and less when ahead"
+}
+
+info_pane = pn.pane.Markdown("", sizing_mode="stretch_width")
 
 ##plot variable options
 plot_var_options = {
@@ -67,9 +82,48 @@ var_labels = {
     "profit_loss": "Profit/Loss ($)"}
 
 
+##callback for info icons
+def update_info(event):
+    """Update info pane based on selected strategies"""
+    old_set = set(event.old or [])
+    new_set = set(event.new or [])
+
+    added = new_set - old_set
+    removed = old_set - new_set
+
+    if added:
+        strat = added.pop() #to show the newly added strategy info
+        info_pane.object = f"**{strat}**: {strategy_info[strat]}"
+    elif removed:
+        if new_set:
+            strat = list(new_set)[-1] #show info of the last remaining strategy
+            info_pane.object = f"**{strat}**: {strategy_info[strat]}"
+        else:
+            info_pane.object = "" #no strategy selected, so we clear the info pane
+strategy_selector.param.watch(update_info, 'value')
 
 
-###Output###
+##updating the visibility of stretegy-specific sliders
+def update_visibility_sliders(event):
+    """Update visibility of strategy-specific sliders based on selected strategies"""
+    strategies = event.new #new list of selected strategies
+
+    monthly_contrib.visible = True 
+    growth_slider.visible = False
+    sma_period_slider.visible = False
+    DD_treshold_slider.visible = False  
+
+    if "Simple Moving Average DCA - Momentum" in strategies or "Simple Moving Average DCA - Mean Reversion" in strategies:
+        sma_period_slider.visible = True
+    if "Value Averaging" in strategies:
+        growth_slider.visible = True
+    if "Double Down DCA" in strategies:
+        DD_treshold_slider.visible = True
+strategy_selector.param.watch(update_visibility_sliders, "value")
+
+
+
+####Output####
 ##preview
 preview_pane = pn.pane.HoloViews(None, sizing_mode="stretch_width", height=350)
 
@@ -85,12 +139,13 @@ template = pn.template.FastListTemplate(title = "Retail Investment Strategy Back
     sidebar=[ticker, 
              start_date, 
              end_date, 
-             monthly_contrib, 
-             growth_slider,
-             sma_period_slider,
+             monthly_contrib,
              DD_treshold_slider,
+             sma_period_slider,
+             growth_slider,
              pn.pane.Markdown("### Strategies"), 
              strategy_selector, 
+             info_pane,
              pn.pane.Markdown("### Plot Settings"), 
              plot_var, 
              run_button],
@@ -106,7 +161,7 @@ template.servable()
 
 
 
-###Simulation func###
+####Simulation func####
 def run_simulation(simulation):
     """Run the simulation with the specified parameters from the "Run Simulation" button"""
 
