@@ -17,33 +17,74 @@ from dca_simulator.metrics import compute_KeyMetrics
 
 ####Widgets####
 ##text box for ticker
-top15_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'BRK-B', 'META', 'UNH', 'JNJ', 'V', 'WMT', 'JPM', 'PG', 'MA']
 ticker = pn.widgets.TextInput(name="Ticker", value="AAPL", width=150)
 ticker.visible = False #we hide it until "Manual Input" mode is selected
 stock_selection_title = pn.pane.Markdown("### Select Stocks or Indices by:")
 
+#ticker selection bar
 stock_selection_mode = pn.widgets.RadioButtonGroup(options=["Ticker List", "Sector", "Manual Input"], button_type="primary")
 stock_selection_mode.value = None #no mode selected at the beginning
-
-ticker_list_selector = pn.widgets.MultiSelect(name="Select Tickers", options = top15_tickers, size=10)
-
-ticker_list_accordion = pn.Accordion(("Ticker Selection", ticker_list_selector))
-ticker_list_accordion[0].style={'font_size': "5px"}
-ticker_list_accordion.active = []
-ticker_list_accordion.visible=False #we hide it until "Ticker List" mode is selected
 
 def update_stock_selection(event):
     """Update the visibility of ticker selection widgets depending on stock selection mode"""
     mode = event.new
 
     ticker_list_accordion.visible = False
+    sector_selector.visible = False
     ticker.visible = False
 
     if mode == "Ticker List":
+        ticker_list_selector.options = top15_tickers
+        ticker_list_selector.value = [] #no ticker selected at the beginning
+        ticker_list_accordion.visible = True
+
+    elif mode == "Sector":
+        sector_selector.visible = True
         ticker_list_accordion.visible = True
     elif mode == "Manual Input":
         ticker.visible = True
 stock_selection_mode.param.watch(update_stock_selection, 'value')
+
+
+#Ticker List and Ticker Selection
+top15_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'BRK-B', 'META', 'UNH', 'JNJ', 'V', 'WMT', 'JPM', 'PG', 'MA']
+ticker_list_selector = pn.widgets.MultiSelect(options = top15_tickers, size=10)
+ticker_list_accordion = pn.Accordion(("Select Ticker(s)", ticker_list_selector))
+ticker_list_accordion.active = []
+ticker_list_accordion.visible=False #we hide it until "Ticker List" mode is selected
+
+#Sector Selection
+sector_tickers = {
+                  "Information Technology": ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'ADBE', 'CRM', 'CSCO', 'INTC', 'ORCL', 'AMD', 'TXN', 'ACN', 'IBM', 'NOW', 'ADP'],
+                  "Healthcare": ['UNH', 'JNJ', 'PFE', 'MRK', 'ABBV', 'TMO', 'DHR', 'BMY', 'LLY', 'AMGN', 'CVS', 'MDT', 'GILD', 'ZTS', 'CNC'],
+                  "Financials": ['BRK-B', 'JPM', 'V', 'MA', 'BAC', 'WFC', 'C', 'GS', 'AXP', 'MS', 'PNC', 'SCHW', 'BK', 'USB', 'TFC'],
+                  "Consumer Discretionary": ['AMZN', 'TSLA', 'HD', 'MCD', 'NKE', 'SBUX', 'LOW', 'BKNG', 'TJX', 'GM', 'F', 'EBAY', 'ROST', 'ORLY', 'YUM'],
+                  "Communication Services": ['META', 'GOOGL', 'NFLX', 'DIS', 'CMCSA', 'T', 'VZ', 'ATVI', 'EA', 'TMUS', 'CHTR', 'FOXA', 'SIRI', 'TTWO', 'IPG'],
+                  "Industrials": ['UNP', 'HON', 'UPS', 'BA', 'CAT', 'LMT', 'GE', 'MMM', 'DE', 'RTX', 'FDX', 'ITW', 'EMR', 'DOV', 'CME'],
+                  "Consumer Staples": ['PG', 'KO', 'PEP', 'WMT', 'COST', 'MDLZ', 'CL', 'TGT', 'CVS', 'KMB', 'GIS', 'EL', 'ADM', 'SYY', 'HSY'],
+                  "Energy": ['XOM', 'CVX', 'COP', 'SLB', 'EOG', 'PSX', 'VLO', 'MPC', 'KMI', 'OXY', 'HES', 'WMB', 'CPT', 'DVN', 'FTI'],
+                  "Utilities": ['NEE', 'DUK', 'SO', 'D', 'AEP', 'EXC', 'SRE', 'PEG', 'ES', 'XEL', 'EIX', 'PCG', 'FE', 'PPL', 'AVANGRID'],
+                  "Materials": ['LIN', 'APD', 'NEM', 'ECL', 'SHW', 'DD', 'FCX', 'MLM', 'VMC', 'PPG', 'ALB', 'CF', 'MOS', 'CTVA', 'IFF'],
+                  "Real Estate": ['AMT', 'PLD', 'CCI', 'EQIX', 'PSA', 'SPG', 'DLR', 'AVB', 'EQR', 'VTR', 'WELL', 'O', 'SBAC', 'EXR', 'ESS']
+                 }
+sector_selector = pn.widgets.Select(name = "Select Sector", options = list(sector_tickers.keys()), value = None, width=200) 
+sector_selector.visible = False #we hide it until "Sector" mode is selected
+
+
+def update_sector_selection(event):
+    """Update the ticker selection based on selected sector"""
+    sector = event.new
+    if sector is None:
+        return
+    
+    tickers = sector_tickers[sector]
+    ticker_list_selector.options = tickers
+    ticker_list_selector.value = tickers[:] #select all tickers in the sector by default
+sector_selector.param.watch(update_sector_selection, "value")
+
+
+
+
 
 
 ##date picker
@@ -165,6 +206,7 @@ metrics_pane = pn.pane.DataFrame(None, sizing_mode="stretch_width")
 template = pn.template.FastListTemplate(title = "Retail Investment Strategy Backtester",
     sidebar=[stock_selection_title,
              stock_selection_mode,
+             sector_selector,
              ticker_list_accordion,
              ticker, 
              start_date, 
