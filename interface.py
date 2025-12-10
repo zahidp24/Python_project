@@ -7,7 +7,7 @@ import holoviews as hv
 from bokeh.models import HoverTool
 from bokeh.models import NumeralTickFormatter
 
-from dca_simulator.data_loader import load_price_data
+from dca_simulator.data_loader import load_price_data, load_multiple_price_data
 from dca_simulator.strategies import (dca_standard, dca_DD, lump_sum, dca_sma_mom, dca_sma_mean_rev, value_averaging)
 from dca_simulator.metrics import compute_KeyMetrics
 
@@ -17,8 +17,8 @@ from dca_simulator.metrics import compute_KeyMetrics
 
 ####Widgets####
 ##text box for ticker
-ticker = pn.widgets.TextInput(name="Ticker", value="AAPL", width=150)
-ticker.visible = False #we hide it until "Manual Input" mode is selected
+ticker_text = pn.widgets.TextInput(name="Ticker Text", value="AAPL", width=150)
+ticker_text.visible = False #we hide it until "Manual Input" mode is selected
 stock_selection_title = pn.pane.Markdown("### Select Stocks or Indices by:")
 
 #ticker selection bar
@@ -29,29 +29,47 @@ def update_stock_selection(event):
     """Update the visibility of ticker selection widgets depending on stock selection mode"""
     mode = event.new
 
-    ticker_list_accordion.visible = False
+    ticker_list.visible = False
     sector_selector.visible = False
-    ticker.visible = False
+    ticker_text.visible = False
 
     if mode == "Ticker List":
         ticker_list_selector.options = top15_tickers
         ticker_list_selector.value = [] #no ticker selected at the beginning
-        ticker_list_accordion.visible = True
+        ticker_list.visible = True
 
     elif mode == "Sector":
         sector_selector.visible = True
-        ticker_list_accordion.visible = True
+        ticker_list.visible = True
+
     elif mode == "Manual Input":
-        ticker.visible = True
+        ticker_text.visible = True
 stock_selection_mode.param.watch(update_stock_selection, 'value')
+
+
+def get_selected_tickers(): 
+    """Get the list of selected tickers based on the stock selection mode"""
+    mode = stock_selection_mode.value
+
+    if mode == "Ticker List":
+        return ticker_list_selector.value
+    
+    elif mode == "Sector":
+        return ticker_list_selector.value
+    
+    elif mode == "Manual Input":
+        return [ticker_text.value] if ticker_text.value else []
+    
+    else:
+        return []
 
 
 #Ticker List and Ticker Selection
 top15_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'BRK-B', 'META', 'UNH', 'JNJ', 'V', 'WMT', 'JPM', 'PG', 'MA']
 ticker_list_selector = pn.widgets.MultiSelect(options = top15_tickers, size=10)
-ticker_list_accordion = pn.Accordion(("Select Ticker(s)", ticker_list_selector))
-ticker_list_accordion.active = []
-ticker_list_accordion.visible=False #we hide it until "Ticker List" mode is selected
+ticker_list = pn.Column(pn.pane.Markdown("### Select Ticker(s)"), ticker_list_selector)
+ticker_list.active = []
+ticker_list.visible=False #we hide it until "Ticker List" mode is selected
 
 #Sector Selection
 sector_tickers = {
@@ -207,8 +225,8 @@ template = pn.template.FastListTemplate(title = "Retail Investment Strategy Back
     sidebar=[stock_selection_title,
              stock_selection_mode,
              sector_selector,
-             ticker_list_accordion,
-             ticker, 
+             ticker_list,
+             ticker_text, 
              start_date, 
              end_date, 
              monthly_contrib,
@@ -237,7 +255,8 @@ template.servable()
 def run_simulation(simulation):
     """Run the simulation with the specified parameters from the "Run Simulation" button"""
 
-    selected_ticker = ticker.value
+    selected_tickers = get_selected_tickers()
+
     selected_strategies = strategy_selector.value
     selected_var = plot_var_options[plot_var.value]
     start = start_date.value
@@ -249,12 +268,12 @@ def run_simulation(simulation):
 
     ##Data loading
     try:    
-        df = load_price_data(selected_ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+        df = load_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
 
         if df is None or df.empty:
-            raise ValueError(f"No data found for ticker '{selected_ticker}'.")
+            raise ValueError(f"No data found for ticker '{selected_tickers}'.")
         
-        preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_ticker} Price History', responsive=True)
+        preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_tickers} Price History', responsive=True)
     
 
     except Exception as e:
