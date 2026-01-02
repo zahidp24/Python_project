@@ -4,11 +4,10 @@ import datetime as dt
 from pathlib import Path
 from .data_processing import data_process  
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-AAPL_CSV = REPO_ROOT / "AAPL_2000_2025.csv"
+AAPL_CSV = Path(__file__).resolve().parent.parent / "AAPL_2000_2025.csv"
 
 def load_price_data(ticker: str, start_date: str, end_date: str | None = None):
-    """Load daily Close prices for a stock. Falls back to local CSV if yfinance fails/rate-limits."""
+    """Download daily close prices for a stock. If yfinance fails, fallback to local AAPL CSV."""
         
     if end_date == "" or end_date is None:
         end_date = dt.date.today().strftime("%Y-%m-%d")  
@@ -21,13 +20,27 @@ def load_price_data(ticker: str, start_date: str, end_date: str | None = None):
     except Exception:
         df = pd.DataFrame()
 
-    # handle yfinance multiindex columns
     if isinstance(getattr(df, "columns", None), pd.MultiIndex):
         df = df.droplevel(1, axis=1)
 
-    # 2) Fallback to local CSV (AAPL only)
+    # 2) Fallback to CSV for AAPL
     if (df is None or df.empty) and ticker == "AAPL" and AAPL_CSV.exists():
         raw = pd.read_csv(AAPL_CSV)
+        raw["Date"] = pd.to_datetime(raw["Date"], errors="coerce")
+        raw = raw.dropna(subset=["Date"]).set_index("Date").sort_index()
+
+        df = raw[["Close"]]
+        df = df.loc[pd.to_datetime(start_date): pd.to_datetime(end_date)]
+
+    # Still empty? return empty
+    if df is None or df.empty:
+        return pd.DataFrame(columns=["Close"])
+
+    # normalize to Close only
+    df = df[["Close"]]
+
+    df = data_process(df)
+    return df
 
         # If there's a Date column, use it; otherwise assume first column is date
         if "Date" in raw.columns:
