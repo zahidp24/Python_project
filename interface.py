@@ -127,7 +127,7 @@ def run_simulation(simulation):
         if df is None or df.empty:
             raise ValueError(f"No data found for ticker '{selected_ticker}'.")
         
-        preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_ticker} Price History', responsive=True)
+        preview_pane.object = df.hvplot.line(y="Close", title=f"{selected_ticker} Price History", responsive=True)
     
 
     except Exception as e:
