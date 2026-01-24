@@ -266,22 +266,22 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-       # 1. Determine which tickers to load based on the UI mode
-    selected_tickers = get_selected_tickers()
+    ##Data loading
+    try:    
+        df = load_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
 
-    try:
-        # Check if we have a list (Sectors/Ticker List) or a single string (Manual)
-        if isinstance(selected_tickers, list):
-            df = load_multiple_price_data(selected_tickers, start_date.value, end_date.value)
-        else:
-            df = load_price_data(selected_tickers, start_date.value, end_date.value)
-            
         if df is None or df.empty:
-            plot_pane.object = pn.pane.Markdown("### ⚠️ No data found for the selected period/ticker.")
-            return
+            raise ValueError(f"No data found for ticker '{selected_tickers}'.")
+        
+        preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_tickers} Price History', responsive=True)
+    
+
     except Exception as e:
-        plot_pane.object = pn.pane.Markdown(f"### ⚠️ Connection Error: {e}")
+        preview_pane.object = pn.pane.Markdown(f"**Error loading the data:** {str(e)}")
+        plot_pane.object = None
+        metrics_pane.object = None
         return
+
 
     ##Strategies
     results = {}
