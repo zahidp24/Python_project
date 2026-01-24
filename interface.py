@@ -267,52 +267,45 @@ def run_simulation(simulation):
     dd_tresh = DD_treshold_slider.value
 
     ##Data loading
-    try:
     # Format dates for data loading
-    start_date = start.strftime("%Y-%m-%d")
-    end_date = end.strftime("%Y-%m-%d")
+start_date = start.strftime("%Y-%m-%d")
+end_date = end.strftime("%Y-%m-%d")
 
-    # Decide how to load data based on number of selected tickers
-    if len(selected_tickers) == 1:
-        ticker = selected_tickers[0]
-        df = load_price_data(ticker, start_date, end_date)
+# Decide how to load data based on number of selected tickers
+if len(selected_tickers) == 1:
+    ticker = selected_tickers[0]
+    df = load_price_data(ticker, start_date, end_date)
 
     if df is None or df.empty:
         raise ValueError(f"No data found for ticker '{ticker}'.")
 
-        preview_plot = df.hvplot.line(
-            y="Close",
-            title=f"{ticker} Price History",
-            responsive=True
-        )
-    else:
-        merged = load_multiple_price_data(selected_tickers, start_date, end_date)
+    preview_plot = df.hvplot.line(
+        y="Close",
+        title=f"{ticker} Price History",
+        responsive=True
+    )
+
+else:
+    merged = load_multiple_price_data(selected_tickers, start_date, end_date)
 
     if merged is None or merged.empty:
         raise ValueError("No data found for the selected tickers.")
 
-        preview_plot = merged.hvplot.line(
-            x="Date",
-            y="Portfolio",
-            title="Equal-weight Portfolio Price History",
-            responsive=True
-        )
+    preview_plot = merged.hvplot.line(
+        x="Date",
+        y="Portfolio",
+        title="Equal-weight Portfolio Price History",
+        responsive=True
+    )
 
-        # Normalize portfolio output for strategies
-        df = (
-            merged
-            .set_index("Date")[["Portfolio"]]
-            .rename(columns={"Portfolio": "Close"})
-        )
+    # Normalize portfolio output for strategies
+    df = (
+        merged
+        .set_index("Date")[["Portfolio"]]
+        .rename(columns={"Portfolio": "Close"})
+    )
 
-    preview_pane.object = preview_plot
-
-except Exception as e:
-    error_pane.object = f"Error loading the data: {e}"
-    error_pane.visible = True
-    plot_pane.object = None
-    metrics_pane.object = None
-    return
+preview_pane.object = preview_plot
 
     ##Strategies
     results = {}
