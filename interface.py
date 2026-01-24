@@ -268,12 +268,55 @@ def run_simulation(simulation):
 
     ##Data loading
     try:    
-        df = load_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+        # Format dates once for data loading
+start_date = start.strftime("%Y-%m-%d")
+end_date = end.strftime("%Y-%m-%d")
+
+# Decide how to load data based on number of selected tickers
+if len(selected_tickers) == 1:
+    # Single asset: load raw price history
+    ticker = selected_tickers[0]
+    df = load_price_data(ticker, start_date, end_date)
+
+else:
+    # Multiple assets: build an equal-weight portfolio
+    merged = load_multiple_price_data(selected_tickers, start_date, end_date)
+
+    if merged is None or merged.empty:
+        raise ValueError("No data found for the selected tickers.")
+
+    # Normalize portfolio output so strategies always receive
+    # a DataFrame with DatetimeIndex and a single 'Close' column
+    df = (
+        merged
+        .set_index("Date")[["Portfolio"]]
+        .rename(columns={"Portfolio": "Close"})
+    )
 
         if df is None or df.empty:
             raise ValueError(f"No data found for ticker '{selected_tickers}'.")
         
-        preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_tickers} Price History', responsive=True)
+    # Show different preview plots depending on selection type
+    if len(selected_tickers) == 1:
+    ticker = selected_tickers[0]
+
+    # Single asset: show its historical price
+    preview_plot = df.hvplot.line(
+        y="Close",
+        title=f"{ticker} Price History",
+        responsive=True
+    )
+
+else:
+    # Multiple assets: show equal-weight portfolio value
+    preview_plot = merged.hvplot.line(
+        x="Date",
+        y="Portfolio",
+        title="Equal-weight Portfolio Price History",
+        responsive=True
+    )
+
+    preview_pane.object = preview_plot
     
 
     except Exception as e:
