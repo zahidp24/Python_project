@@ -35,7 +35,8 @@ def load_multiple_price_data(tickers: list[str], start_date: str, end_date: str 
             df = load_price_data(ticker, start_date, end_date)
             if df is None or df.empty:
                 continue
-            df = df[["Date", "Close"]].rename(columns={"Close": ticker}) #we need to rename because the previous function did not have to distinguish between different tickers
+            df = df.reset_index().rename(columns={"index": "Date"})
+            df = df[["Date", "Close"]].rename(columns={"Close": ticker}) #load_price_data() returns the date as the index but there is no "Date" column to select (line 38 & 39).
             dfs.append(df)
         except Exception as e:
             print(f"Error loading data for {ticker}: {e}")
@@ -48,5 +49,7 @@ def load_multiple_price_data(tickers: list[str], start_date: str, end_date: str 
     for df in dfs[1:]:
         merged_df = pd.merge(merged_df, df, on="Date", how="inner")
 
-    merged_df["Portfolio"] = merged_df[tickers].mean(axis=1)
+    price_cols = [c for c in merged_df.columns if c != "Date"]
+    merged_df["Portfolio"] = merged_df[price_cols].mean(axis=1) #If one ticker fails to download, you continue, so that ticker’s column ticker’s column won’t exist. 
+    #but you still try to compute mean over  full original list. (line 52 & 53)
     return merged_df
