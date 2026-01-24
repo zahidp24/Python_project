@@ -268,7 +268,7 @@ def run_simulation(simulation):
 
     ##Data loading
     try:
-    # Format dates once for data loading
+    # Format dates for data loading
     start_date = start.strftime("%Y-%m-%d")
     end_date = end.strftime("%Y-%m-%d")
 
@@ -277,20 +277,19 @@ def run_simulation(simulation):
         ticker = selected_tickers[0]
         df = load_price_data(ticker, start_date, end_date)
 
-        if df is None or df.empty:
-            raise ValueError(f"No data found for ticker '{ticker}'.")
+    if df is None or df.empty:
+        raise ValueError(f"No data found for ticker '{ticker}'.")
 
         preview_plot = df.hvplot.line(
             y="Close",
             title=f"{ticker} Price History",
             responsive=True
         )
-
     else:
         merged = load_multiple_price_data(selected_tickers, start_date, end_date)
 
-        if merged is None or merged.empty:
-            raise ValueError("No data found for the selected tickers.")
+    if merged is None or merged.empty:
+        raise ValueError("No data found for the selected tickers.")
 
         preview_plot = merged.hvplot.line(
             x="Date",
@@ -314,7 +313,6 @@ except Exception as e:
     plot_pane.object = None
     metrics_pane.object = None
     return
-
 
     ##Strategies
     results = {}
