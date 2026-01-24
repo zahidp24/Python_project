@@ -266,22 +266,22 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-        ## Data loading
-    start_str = start.strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+       # 1. Determine which tickers to load based on the UI mode
+    selected_tickers = get_selected_tickers()
 
-    # Decide how to load data based on number of selected tickers
-    if len(selected_tickers) == 1:
-        ticker = selected_tickers[0]
-        df = load_price_data(ticker, start_str, end_str)
-    else:
-        merged = load_multiple_price_data(selected_tickers, start_str, end_str)
-        if merged is None or merged.empty:
-            raise ValueError("No data found for the selected tickers.")
-
-        # normalize for strategies: DatetimeIndex + single 'Close' column
-        df = merged.set_index("Date")[["Portfolio"]].rename(columns={"Portfolio": "Close"})
-
+    try:
+        # Check if we have a list (Sectors/Ticker List) or a single string (Manual)
+        if isinstance(selected_tickers, list):
+            df = load_multiple_price_data(selected_tickers, start_date.value, end_date.value)
+        else:
+            df = load_price_data(selected_tickers, start_date.value, end_date.value)
+            
+        if df is None or df.empty:
+            plot_pane.object = pn.pane.Markdown("### ⚠️ No data found for the selected period/ticker.")
+            return
+    except Exception as e:
+        plot_pane.object = pn.pane.Markdown(f"### ⚠️ Connection Error: {e}")
+        return
 
     ##Strategies
     results = {}
