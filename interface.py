@@ -267,20 +267,40 @@ def run_simulation(simulation):
     dd_tresh = DD_treshold_slider.value
 
     ##Data loading
-    try:    
-        df = load_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+        ## Data loading
+    start_str = start.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
 
-        if df is None or df.empty:
-            raise ValueError(f"No data found for ticker '{selected_tickers}'.")
-        
-        preview_pane.object = df.hvplot.line(x="Date", y="Close", title=f'{selected_tickers} Price History', responsive=True)
-    
+    if len(selected_tickers) == 1:
+        ticker = selected_tickers[0]
+        df = load_price_data(ticker, start_str, end_str)
 
-    except Exception as e:
-        preview_pane.object = pn.pane.Markdown(f"**Error loading the data:** {str(e)}")
-        plot_pane.object = None
-        metrics_pane.object = None
-        return
+        preview_plot = df.hvplot.line(
+            y="Close",
+            title=f"{ticker} Price History",
+            responsive=True
+        )
+
+    else:
+        merged = load_multiple_price_data(selected_tickers, start_str, end_str)
+        if merged is None or merged.empty:
+            raise ValueError("No data found for the selected tickers.")
+
+        df = (
+            merged
+            .set_index("Date")[["Portfolio"]]
+            .rename(columns={"Portfolio": "Close"})
+        )
+
+        preview_plot = merged.hvplot.line(
+            x="Date",
+            y="Portfolio",
+            title="Equal-weight Portfolio Price History",
+            responsive=True
+        )
+
+    preview_pane.object = preview_plot
+
 
 
     ##Strategies
