@@ -210,6 +210,8 @@ strategy_selector.param.watch(update_visibility_sliders, "value")
 
 
 ####Output####
+error_pane = pn.pane.Alert("", alert_type="danger", visible=False)
+
 ##preview
 preview_pane = pn.pane.HoloViews(None, sizing_mode="stretch_width", height=350)
 
@@ -240,7 +242,8 @@ template = pn.template.FastListTemplate(title = "Retail Investment Strategy Back
              plot_var, 
              run_button],
 
-    main=[pn.pane.Markdown("## Data Preview"),
+        main=[error_pane,
+          pn.pane.Markdown("## Data Preview"),
           preview_pane,
           pn.pane.Markdown("## Strategy Plot"),
           plot_pane,
