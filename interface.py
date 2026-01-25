@@ -256,7 +256,6 @@ def run_simulation(simulation):
     """
     Run the backtest simulation based on user-selected parameters.
     """
-    # EVERY LINE BELOW MUST BE INDENTED BY 4 SPACES
     selected_tickers = get_selected_tickers()
 
     selected_strategies = strategy_selector.value
@@ -268,26 +267,37 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-    ##Data loading
-    try:    
-        # Logic to handle both single and multiple tickers
-        if isinstance(selected_tickers, list) and len(selected_tickers) > 1:
-            df = load_multiple_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
-        else:
-            ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
-            df = load_price_data(ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+    # --- Data loading (single ticker vs multi-ticker portfolio) ---
+    start_str = start.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
 
-        if df is None or df.empty:
+    is_multi = isinstance(selected_tickers, list) and len(selected_tickers) > 1
+
+    if is_multi:
+        merged = load_multiple_price_data(selected_tickers, start_str, end_str)
+        if merged is None or merged.empty:
             raise ValueError(f"No data found for ticker selection: {selected_tickers}")
-            
-        # Update preview pane
-        preview_pane.object = df.hvplot.line(x="Date", y="Close", title='Price History', responsive=True)
-        
-    except Exception as e:
-        plot_pane.object = pn.pane.Markdown(f"### ⚠️ Error: {e}")
-        return
-    
-    # ... (Continue indenting the rest of your logic for Results, Plotting, and Metrics)
+
+        # Preview: portfolio series
+        preview_pane.object = merged.hvplot.line(
+            x="Date", y="Portfolio", title="Equal-weight Portfolio Price History", responsive=True
+        )
+
+        # Strategies need: DatetimeIndex + a single 'Close' column
+        df = merged.set_index("Date")[["Portfolio"]].rename(columns={"Portfolio": "Close"})
+        df.index = pd.to_datetime(df.index)
+
+    else:
+        ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
+        df = load_price_data(ticker, start_str, end_str)
+        if df is None or df.empty:
+            raise ValueError(f"No data found for ticker selection: {ticker}")
+
+        # Preview: single-ticker close series (date is the index)
+        preview_pane.object = df.hvplot.line(
+            y="Close", title=f"{ticker} Price History", responsive=True
+        )
+
 
     ##Strategies
     results = {}
