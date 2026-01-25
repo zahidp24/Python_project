@@ -284,9 +284,12 @@ def run_simulation(event=None):
                 raise ValueError("No data found for the selected tickers.")
 
             preview_pane.object = merged.hvplot.line(
-                x="Date", y="Portfolio", title="Equal-weight Portfolio Price History", responsive=True
+                x="Date", y="Portfolio",
+                title="Equal-weight Portfolio Price History",
+                responsive=True
             )
 
+            # Normalize for strategies: DatetimeIndex + Close column
             df = merged.set_index("Date")[["Portfolio"]].rename(columns={"Portfolio": "Close"})
             df.index = pd.to_datetime(df.index)
 
@@ -297,31 +300,27 @@ def run_simulation(event=None):
                 raise ValueError(f"No data found for ticker: {ticker}")
 
             preview_pane.object = df.hvplot.line(
-                y="Close", title=f"{ticker} Price History", responsive=True
+                y="Close",
+                title=f"{ticker} Price History",
+                responsive=True
             )
 
-        # ---- Run strategies (for BOTH single & portfolio) ----
+        # ---- Run strategies ----
         if not selected_strategies:
             raise ValueError("Please select at least one strategy.")
 
         results = {}
-
         for strat in selected_strategies:
             if strat == "DCA":
                 results["DCA"] = dca_standard(df, monthly_c)
-
             elif strat == "Double Down DCA":
                 results["Double Down DCA"] = dca_DD(df, monthly_c, dd_tresh)
-
             elif strat == "Lump Sum":
                 results["Lump Sum"] = lump_sum(df, monthly_c)
-
             elif strat == "Simple Moving Average DCA - Momentum":
                 results["SMA Momentum"] = dca_sma_mom(df, monthly_c, sma_p)
-
             elif strat == "Simple Moving Average DCA - Mean Reversion":
                 results["SMA Mean Reversion"] = dca_sma_mean_rev(df, monthly_c, sma_p)
-
             elif strat == "Value Averaging":
                 results["Value Averaging"] = value_averaging(df, growth, monthly_c)
 
@@ -331,11 +330,17 @@ def run_simulation(event=None):
         # ---- Plotting ----
         plots = []
         for name, df_result in results.items():
+            if selected_var not in df_result.columns:
+                raise ValueError(
+                    f"Selected plot variable '{selected_var}' is not available for strategy '{name}'. "
+                    f"Available columns: {list(df_result.columns)}"
+                )
+
             curve = df_result.hvplot(
                 y=selected_var,
-                ylabel=var_labels[selected_var],
+                ylabel=var_labels.get(selected_var, selected_var),
                 label=name,
-                title=f"{var_labels[selected_var]} over Time",
+                title=f"{var_labels.get(selected_var, selected_var)} over Time",
                 height=350,
                 responsive=True
             )
@@ -347,25 +352,23 @@ def run_simulation(event=None):
 
         plot_pane.object = interact_plot
 
-        # ---- Metrics ----
-metrics_rows = []
-for name, df_result in results.items():
-    try:
-        m = compute_KeyMetrics(df_result)
-    except Exception as e:
-        m = {"Metrics Error": str(e)}
-    m["Strategy"] = name
-    metrics_rows.append(m)
+        # ---- Metrics (never kill plots if metrics fails) ----
+        metrics_rows = []
+        for name, df_result in results.items():
+            try:
+                m = compute_KeyMetrics(df_result)
+            except Exception as e:
+                m = {"Metrics Error": str(e)}
+            m["Strategy"] = name
+            metrics_rows.append(m)
 
-metrics_pane.object = pd.DataFrame(metrics_rows).set_index("Strategy")
-
-
+        metrics_pane.object = pd.DataFrame(metrics_rows).set_index("Strategy")
 
     except Exception as e:
-    error_pane.object = str(e)
-    error_pane.visible = True
-    return
-
+        error_pane.object = str(e)
+        error_pane.visible = True
+        # Don’t wipe plots; keep last successful output visible
+        return
 
 
     ##Plotting
