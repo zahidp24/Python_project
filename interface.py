@@ -266,40 +266,20 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-    ##Data loading
-        ## Data loading
-    start_str = start.strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+   ##Data loading
+    try:    
+        # Check if we are loading multiple tickers (Sectors/List) or a single ticker
+        if isinstance(selected_tickers, list) and len(selected_tickers) > 1:
+            df = load_multiple_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+        else:
+            # Handle single ticker string or single-item list
+            ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
+            df = load_price_data(ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
 
-    if len(selected_tickers) == 1:
-        ticker = selected_tickers[0]
-        df = load_price_data(ticker, start_str, end_str)
-
-        preview_plot = df.hvplot.line(
-            y="Close",
-            title=f"{ticker} Price History",
-            responsive=True
-        )
-
-    else:
-        merged = load_multiple_price_data(selected_tickers, start_str, end_str)
-        if merged is None or merged.empty:
-            raise ValueError("No data found for the selected tickers.")
-
-        df = (
-            merged
-            .set_index("Date")[["Portfolio"]]
-            .rename(columns={"Portfolio": "Close"})
-        )
-
-        preview_plot = merged.hvplot.line(
-            x="Date",
-            y="Portfolio",
-            title="Equal-weight Portfolio Price History",
-            responsive=True
-        )
-
-    preview_pane.object = preview_plot
+        if df is None or df.empty:
+            raise ValueError(f"No data found for ticker selection: {selected_tickers}")
+        
+        preview_pane.object = df.hvplot.line(x="Date", y="Close", title='Price History', responsive=True)
 
 
 
