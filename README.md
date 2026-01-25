@@ -1,4 +1,4 @@
-# Python Investment Simulator
+# Investment Simulator
 
 An interactive investment strategy simulator that is built with **Panel** and **Python**.
 The application enables its users to backtest different investment strategies such as
