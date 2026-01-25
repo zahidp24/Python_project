@@ -332,8 +332,8 @@ def run_simulation(event=None):
         for name, df_result in results.items():
             if selected_var not in df_result.columns:
                 raise ValueError(
-                    f"Selected plot variable '{selected_var}' is not available for strategy '{name}'. "
-                    f"Available columns: {list(df_result.columns)}"
+                    f"Selected plot variable '{selected_var}' not available for '{name}'. "
+                    f"Available: {list(df_result.columns)}"
                 )
 
             curve = df_result.hvplot(
@@ -352,7 +352,7 @@ def run_simulation(event=None):
 
         plot_pane.object = interact_plot
 
-        # ---- Metrics (never kill plots if metrics fails) ----
+        # ---- Metrics (never kill plots) ----
         metrics_rows = []
         for name, df_result in results.items():
             try:
@@ -367,7 +367,7 @@ def run_simulation(event=None):
     except Exception as e:
         error_pane.object = str(e)
         error_pane.visible = True
-        # Don’t wipe plots; keep last successful output visible
+        # keep last plot visible if there was one
         return
 
 
