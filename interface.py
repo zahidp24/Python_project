@@ -266,21 +266,24 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-       ##Data loading
+    ##Data loading
     try:    
-        # Check if we are loading multiple tickers (Sectors/List) or a single ticker
+        # Logic to handle both single and multiple tickers (Equal Weighting Task)
         if isinstance(selected_tickers, list) and len(selected_tickers) > 1:
             df = load_multiple_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
         else:
-            # Handle single ticker string or single-item list
             ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
             df = load_price_data(ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
 
         if df is None or df.empty:
             raise ValueError(f"No data found for ticker selection: {selected_tickers}")
-        
+            
+        # Update preview pane
         preview_pane.object = df.hvplot.line(x="Date", y="Close", title='Price History', responsive=True)
-
+        
+    except Exception as e:
+        plot_pane.object = pn.pane.Markdown(f"### ⚠️ Error: {e}")
+        return
 
 
     ##Strategies
