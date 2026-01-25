@@ -255,11 +255,8 @@ template.servable()
 
 
 ####Simulation func####
-def run_simulation(simulation):
-    """
-    Run the backtest simulation based on user-selected parameters.
-    """
-    # Reset any previous error message
+def run_simulation(event=None):
+    """Run the backtest simulation based on user-selected parameters."""
     error_pane.visible = False
     error_pane.object = ""
 
@@ -267,6 +264,7 @@ def run_simulation(simulation):
         selected_tickers = get_selected_tickers()
         selected_strategies = strategy_selector.value
         selected_var = plot_var_options[plot_var.value]
+
         start = start_date.value
         end = end_date.value
         monthly_c = monthly_contrib.value
@@ -274,68 +272,98 @@ def run_simulation(simulation):
         sma_p = sma_period_slider.value
         dd_tresh = DD_treshold_slider.value
 
-        # --- Data loading (single ticker vs multi-ticker portfolio) ---
+        # ---- Load data ----
         start_str = start.strftime("%Y-%m-%d")
         end_str = end.strftime("%Y-%m-%d")
 
-        is_multi = isinstance(selected_tickers, list) and len(selected_tickers) > 1
+        is_portfolio = isinstance(selected_tickers, list) and len(selected_tickers) > 1
 
-        if is_multi:
+        if is_portfolio:
             merged = load_multiple_price_data(selected_tickers, start_str, end_str)
             if merged is None or merged.empty:
-                raise ValueError(f"No data found for ticker selection: {selected_tickers}")
+                raise ValueError("No data found for the selected tickers.")
 
-            # Preview: portfolio series
             preview_pane.object = merged.hvplot.line(
                 x="Date", y="Portfolio", title="Equal-weight Portfolio Price History", responsive=True
-                )
+            )
 
-            # Strategies need: DatetimeIndex + a single 'Close' column
             df = merged.set_index("Date")[["Portfolio"]].rename(columns={"Portfolio": "Close"})
             df.index = pd.to_datetime(df.index)
 
         else:
             ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
             df = load_price_data(ticker, start_str, end_str)
-            
             if df is None or df.empty:
-                raise ValueError(f"No data found for ticker selection: {ticker}")
+                raise ValueError(f"No data found for ticker: {ticker}")
 
-            # Preview: single-ticker close series (date is the index)
             preview_pane.object = df.hvplot.line(
                 y="Close", title=f"{ticker} Price History", responsive=True
-                )
+            )
 
+        # ---- Run strategies (for BOTH single & portfolio) ----
+        if not selected_strategies:
+            raise ValueError("Please select at least one strategy.")
 
-            ##Strategies
-            results = {}
+        results = {}
 
-            for strat in selected_strategies:
-                if strat == "DCA":
-                    results["DCA"] = dca_standard(df, monthly_c)
-        
-                elif strat == "Double Down DCA":
-                    results["Double Down DCA"] = dca_DD(df, monthly_c, dd_tresh)
-                
-                elif strat == "Lump Sum":
-                    results["Lump Sum"] = lump_sum(df, monthly_c)
+        for strat in selected_strategies:
+            if strat == "DCA":
+                results["DCA"] = dca_standard(df, monthly_c)
 
-                elif strat == "Simple Moving Average DCA - Momentum":
-                    results["SMA Momentum"] = dca_sma_mom(df, monthly_c, sma_p)
-        
-                elif strat == "Simple Moving Average DCA - Mean Reversion":
-                    results["SMA Mean Reversion"] = dca_sma_mean_rev(df, monthly_c, sma_p)
-        
-                elif strat == "Value Averaging":
-                    results["Value Averaging"] = value_averaging(df, growth, monthly_c)
+            elif strat == "Double Down DCA":
+                results["Double Down DCA"] = dca_DD(df, monthly_c, dd_tresh)
 
-        except Exception as e:
-            error_pane.object = f"{e}"
-            error_pane.visible = True
-            preview_pane.object = None
-            plot_pane.object = None
-            metrics_pane.object = None
-            return
+            elif strat == "Lump Sum":
+                results["Lump Sum"] = lump_sum(df, monthly_c)
+
+            elif strat == "Simple Moving Average DCA - Momentum":
+                results["SMA Momentum"] = dca_sma_mom(df, monthly_c, sma_p)
+
+            elif strat == "Simple Moving Average DCA - Mean Reversion":
+                results["SMA Mean Reversion"] = dca_sma_mean_rev(df, monthly_c, sma_p)
+
+            elif strat == "Value Averaging":
+                results["Value Averaging"] = value_averaging(df, growth, monthly_c)
+
+        if not results:
+            raise ValueError("No strategy results were generated.")
+
+        # ---- Plotting ----
+        plots = []
+        for name, df_result in results.items():
+            curve = df_result.hvplot(
+                y=selected_var,
+                ylabel=var_labels[selected_var],
+                label=name,
+                title=f"{var_labels[selected_var]} over Time",
+                height=350,
+                responsive=True
+            )
+            plots.append(curve)
+
+        interact_plot = plots[0]
+        for curve in plots[1:]:
+            interact_plot *= curve
+
+        plot_pane.object = interact_plot
+
+        # ---- Metrics ----
+        metrics_list = []
+        for name, df_result in results.items():
+            metrics = compute_KeyMetrics(df_result)
+            metrics["Strategy"] = name
+            metrics_list.append(metrics)
+
+        metrics_pane.object = pd.DataFrame(metrics_list).set_index("Strategy")
+
+    except Exception as e:
+        error_pane.object = str(e)
+        error_pane.visible = True
+        preview_pane.object = None
+        plot_pane.object = None
+        metrics_pane.object = None
+        return
+
 
 
     ##Plotting
