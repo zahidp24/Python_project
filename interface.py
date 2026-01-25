@@ -259,72 +259,83 @@ def run_simulation(simulation):
     """
     Run the backtest simulation based on user-selected parameters.
     """
-    selected_tickers = get_selected_tickers()
+    # Reset any previous error message
+    error_pane.visible = False
+    error_pane.object = ""
 
-    selected_strategies = strategy_selector.value
-    selected_var = plot_var_options[plot_var.value]
-    start = start_date.value
-    end = end_date.value
-    monthly_c = monthly_contrib.value
-    growth = growth_slider.value
-    sma_p = sma_period_slider.value
-    dd_tresh = DD_treshold_slider.value
+    try:
+        selected_tickers = get_selected_tickers()
+        selected_strategies = strategy_selector.value
+        selected_var = plot_var_options[plot_var.value]
+        start = start_date.value
+        end = end_date.value
+        monthly_c = monthly_contrib.value
+        growth = growth_slider.value
+        sma_p = sma_period_slider.value
+        dd_tresh = DD_treshold_slider.value
 
-    # --- Data loading (single ticker vs multi-ticker portfolio) ---
-    start_str = start.strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+        # --- Data loading (single ticker vs multi-ticker portfolio) ---
+        start_str = start.strftime("%Y-%m-%d")
+        end_str = end.strftime("%Y-%m-%d")
 
-    is_multi = isinstance(selected_tickers, list) and len(selected_tickers) > 1
+        is_multi = isinstance(selected_tickers, list) and len(selected_tickers) > 1
 
-    if is_multi:
-        merged = load_multiple_price_data(selected_tickers, start_str, end_str)
-        if merged is None or merged.empty:
-            raise ValueError(f"No data found for ticker selection: {selected_tickers}")
+        if is_multi:
+            merged = load_multiple_price_data(selected_tickers, start_str, end_str)
+            if merged is None or merged.empty:
+                raise ValueError(f"No data found for ticker selection: {selected_tickers}")
 
-        # Preview: portfolio series
-        preview_pane.object = merged.hvplot.line(
-            x="Date", y="Portfolio", title="Equal-weight Portfolio Price History", responsive=True
-        )
+            # Preview: portfolio series
+            preview_pane.object = merged.hvplot.line(
+                x="Date", y="Portfolio", title="Equal-weight Portfolio Price History", responsive=True
+                )
 
-        # Strategies need: DatetimeIndex + a single 'Close' column
-        df = merged.set_index("Date")[["Portfolio"]].rename(columns={"Portfolio": "Close"})
-        df.index = pd.to_datetime(df.index)
+            # Strategies need: DatetimeIndex + a single 'Close' column
+            df = merged.set_index("Date")[["Portfolio"]].rename(columns={"Portfolio": "Close"})
+            df.index = pd.to_datetime(df.index)
 
-    else:
-        ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
-        df = load_price_data(ticker, start_str, end_str)
-        if df is None or df.empty:
-            raise ValueError(f"No data found for ticker selection: {ticker}")
+        else:
+            ticker = selected_tickers[0] if isinstance(selected_tickers, list) else selected_tickers
+            df = load_price_data(ticker, start_str, end_str)
+            
+            if df is None or df.empty:
+                raise ValueError(f"No data found for ticker selection: {ticker}")
 
-        # Preview: single-ticker close series (date is the index)
-        preview_pane.object = df.hvplot.line(
-            y="Close", title=f"{ticker} Price History", responsive=True
-        )
+            # Preview: single-ticker close series (date is the index)
+            preview_pane.object = df.hvplot.line(
+                y="Close", title=f"{ticker} Price History", responsive=True
+                )
 
 
-    ##Strategies
-    results = {}
+            ##Strategies
+            results = {}
 
-    for strat in selected_strategies:
-        if strat == "DCA":
-            results["DCA"] = dca_standard(df, monthly_c)
+            for strat in selected_strategies:
+                if strat == "DCA":
+                    results["DCA"] = dca_standard(df, monthly_c)
         
-        elif strat == "Double Down DCA":
-            results["Double Down DCA"] = dca_DD(df, monthly_c, dd_tresh)
+                elif strat == "Double Down DCA":
+                    results["Double Down DCA"] = dca_DD(df, monthly_c, dd_tresh)
+                
+                elif strat == "Lump Sum":
+                    results["Lump Sum"] = lump_sum(df, monthly_c)
 
-        elif strat == "Lump Sum":
-            results["Lump Sum"] = lump_sum(df, monthly_c)
-
-        elif strat == "Simple Moving Average DCA - Momentum":
-            results["SMA Momentum"] = dca_sma_mom(df, monthly_c, sma_p)
+                elif strat == "Simple Moving Average DCA - Momentum":
+                    results["SMA Momentum"] = dca_sma_mom(df, monthly_c, sma_p)
         
-        elif strat == "Simple Moving Average DCA - Mean Reversion":
-            results["SMA Mean Reversion"] = dca_sma_mean_rev(df, monthly_c, sma_p)
+                elif strat == "Simple Moving Average DCA - Mean Reversion":
+                    results["SMA Mean Reversion"] = dca_sma_mean_rev(df, monthly_c, sma_p)
         
-        elif strat == "Value Averaging":
-            results["Value Averaging"] = value_averaging(df, growth, monthly_c)
+                elif strat == "Value Averaging":
+                    results["Value Averaging"] = value_averaging(df, growth, monthly_c)
 
-
+        except Exception as e:
+            error_pane.object = f"{e}"
+            error_pane.visible = True
+            preview_pane.object = None
+            plot_pane.object = None
+            metrics_pane.object = None
+            return
 
 
     ##Plotting
