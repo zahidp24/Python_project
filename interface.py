@@ -348,30 +348,22 @@ def run_simulation(event=None):
         plot_pane.object = interact_plot
 
         # ---- Metrics ----
-            ## Key Metrics table (never let metrics errors kill the plots)
-    metrics_rows = []
+metrics_rows = []
+for name, df_result in results.items():
+    try:
+        m = compute_KeyMetrics(df_result)
+    except Exception as e:
+        m = {"Metrics Error": str(e)}
+    m["Strategy"] = name
+    metrics_rows.append(m)
 
-    for name, df_result in results.items():
-        try:
-            m = compute_KeyMetrics(df_result)
-        except Exception as e:
-            # Keep the app running and show what failed
-            m = {"Metrics Error": str(e)}
+metrics_pane.object = pd.DataFrame(metrics_rows).set_index("Strategy")
 
-        m["Strategy"] = name
-        metrics_rows.append(m)
-
-    # Always build a table, even if some/all metrics failed
-    metrics_df = pd.DataFrame(metrics_rows).set_index("Strategy")
-    metrics_pane.object = metrics_df
 
 
     except Exception as e:
     error_pane.object = str(e)
     error_pane.visible = True
-    preview_pane.object = None
-    plot_pane.object = None
-    metrics_pane.object = None
     return
 
 
