@@ -364,10 +364,9 @@ def run_simulation(event=None):
 
         metrics_pane.object = pd.DataFrame(metrics_rows).set_index("Strategy")
 
-    except Exception as e:
+      except Exception as e:
         error_pane.object = str(e)
         error_pane.visible = True
-        # keep last plot visible if there was one
         return
 
 
@@ -397,24 +396,6 @@ def run_simulation(event=None):
         interact_plot *= curve #add the curves on top of each other
 
     plot_pane.object = interact_plot
-
-
-
-    ##Key Metrics table
-    metrics_list = []
-
-    for name, df_result in results.items():
-        try:
-            metrics = compute_KeyMetrics(df_result)
-            metrics["Strategy"] = name
-            metrics_list.append(metrics)
-        except Exception as e:
-            print(f'Error computing metrics for {name}: {e}')
-
-    
-    metrics_df = pd.DataFrame(metrics_list).set_index("Strategy")
-    metrics_pane.object = metrics_df
-
 
 
 ##connecting button with run_simulation
