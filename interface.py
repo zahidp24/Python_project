@@ -253,8 +253,10 @@ template.servable()
 
 ####Simulation func####
 def run_simulation(simulation):
-    """Run the simulation with the specified parameters from the "Run Simulation" button"""
-
+    """
+    Run the backtest simulation based on user-selected parameters.
+    """
+    # EVERY LINE BELOW MUST BE INDENTED BY 4 SPACES
     selected_tickers = get_selected_tickers()
 
     selected_strategies = strategy_selector.value
@@ -268,7 +270,7 @@ def run_simulation(simulation):
 
     ##Data loading
     try:    
-        # Logic to handle both single and multiple tickers (Equal Weighting Task)
+        # Logic to handle both single and multiple tickers
         if isinstance(selected_tickers, list) and len(selected_tickers) > 1:
             df = load_multiple_price_data(selected_tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
         else:
@@ -284,7 +286,8 @@ def run_simulation(simulation):
     except Exception as e:
         plot_pane.object = pn.pane.Markdown(f"### ⚠️ Error: {e}")
         return
-
+    
+    # ... (Continue indenting the rest of your logic for Results, Plotting, and Metrics)
 
     ##Strategies
     results = {}
