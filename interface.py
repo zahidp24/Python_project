@@ -266,7 +266,7 @@ def run_simulation(simulation):
     sma_p = sma_period_slider.value
     dd_tresh = DD_treshold_slider.value
 
-   ##Data loading
+       ##Data loading
     try:    
         # Check if we are loading multiple tickers (Sectors/List) or a single ticker
         if isinstance(selected_tickers, list) and len(selected_tickers) > 1:
