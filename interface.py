@@ -46,6 +46,20 @@ def update_stock_selection(event):
         ticker_text.visible = True
 stock_selection_mode.param.watch(update_stock_selection, 'value')
 
+def update_sector_info(event=None):
+    if stock_selection_mode.value == "Sector" and sector_selector.value:
+        n = len(sector_tickers[sector_selector.value])
+        sector_info_pane.object = (
+            f"**Sector mode:** Invest an equal amount every month into the current "
+            f"top **{n}** companies in the **{sector_selector.value}** sector."
+        )
+        sector_info_pane.visible = True
+    else:
+        sector_info_pane.visible = False
+
+stock_selection_mode.param.watch(update_sector_info, "value")
+sector_selector.param.watch(update_sector_info, "value")
+
 
 def get_selected_tickers(): 
     """Get the list of selected tickers based on the stock selection mode"""
@@ -141,6 +155,8 @@ strategy_info = {
 }
 
 info_pane = pn.pane.Markdown("", sizing_mode="stretch_width")
+sector_info_pane = pn.pane.Markdown("", visible=False, sizing_mode="stretch_width")
+
 
 ##plot variable options
 plot_var_options = {
@@ -226,6 +242,7 @@ template = pn.template.FastListTemplate(title = "Retail Investment Strategy Back
     sidebar=[stock_selection_title,
              stock_selection_mode,
              sector_selector,
+             sector_info_pane,
              ticker_list,
              ticker_text, 
              start_date, 
