@@ -335,9 +335,10 @@ def run_simulation(event=None):
             metrics_rows.append(m)
         metrics_pane.object = pd.DataFrame(metrics_rows).set_index("Strategy")
 
-    except Exception as e:
-        error_pane.object = f"Error: {str(e)}"
-        error_pane.visible = True
+   except Exception as e:
+    error_pane.object = f"### ⚠️ Error: {e}"
+    error_pane.visible = True
+    return
 
 
     ##Plotting
