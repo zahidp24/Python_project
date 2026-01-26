@@ -346,6 +346,7 @@ def run_simulation(event=None):
 
 
 
+
     ##Plotting
     plots = []
 
