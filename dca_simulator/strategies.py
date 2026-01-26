@@ -10,7 +10,7 @@ def dca_DD(df, monthly_contrib: float, DD_threshold: float=0.15):
 
     df["12m_high"] = df["Close"].rolling(252).max() #252 trading days in a year
     df["drawdown"] = df["Close"]/df["12m_high"]
-    df["DD_cond"] = df["drawdown"] <= (1-DD_threshold) #This is True when the stock is >=20% down from 12m_high
+    df["DD_cond"] = df["drawdown"] <= (1-DD_threshold) #This is True when the stock is >=15% down from 12m_high
 
     
 
