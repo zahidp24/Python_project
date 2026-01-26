@@ -47,7 +47,9 @@ def load_multiple_price_data(tickers: list[str], start_date: str, end_date: str 
     
     merged_df = dfs[0]
     for df in dfs[1:]:
-        merged_df = pd.merge(merged_df, df, on="Date", how="inner")
+        merged_df = pd.merge(merged_df, df, on="Date", how="outer").sort_values("Date")
+        price_cols = [c for c in merged_df.columns if c != "Date"]
+        merged_df[price_cols] = merged_df[price_cols].ffill()
 
     price_cols = [c for c in merged_df.columns if c != "Date"]
     merged_df["Portfolio"] = merged_df[price_cols].mean(axis=1) #If one ticker fails to download, you continue, so that ticker’s column ticker’s column won’t exist. 
