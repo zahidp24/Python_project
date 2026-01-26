@@ -68,7 +68,6 @@ def get_selected_tickers():
 top15_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'BRK-B', 'META', 'UNH', 'JNJ', 'V', 'WMT', 'JPM', 'PG', 'MA']
 ticker_list_selector = pn.widgets.MultiSelect(options = top15_tickers, size=10)
 ticker_list = pn.Column(pn.pane.Markdown("### Select Ticker(s)"), ticker_list_selector)
-ticker_list.active = []
 ticker_list.visible=False #we hide it until "Ticker List" mode is selected
 
 #Sector Selection
@@ -253,9 +252,6 @@ template = pn.template.FastListTemplate(title = "Retail Investment Strategy Back
 template.servable()
 
 
-ticker_list = pn.Column(pn.pane.Markdown("### Select Ticker(s)"), ticker_list_selector)
-ticker_list.visible = False 
-
 def run_simulation(event=None):
     error_pane.visible = False
     error_pane.object = ""
@@ -343,37 +339,6 @@ def run_simulation(event=None):
         error_pane.object = f"### ⚠️ Error: {e}"
         error_pane.visible = True
         return
-
-
-
-
-    ##Plotting
-    plots = []
-
-
-
-    def format_axis(plot, element):
-        """Format y-axis to show $ sign and commas for money variables """
-        fmt="$0,0" if selected_var in ["portf_value", "invested_total", "profit_loss"] else "0,0"
-        plot.state.yaxis.formatter = NumeralTickFormatter(format=fmt)
-
-
-
-    for name, df_result in results.items():
-        curve = df_result.hvplot(y=selected_var, 
-                                 ylabel=var_labels[selected_var], 
-                                 label=name, #legend label
-                                 title=f"{var_labels[selected_var]} over Time",
-                                 height=350, 
-                                 responsive=True).opts(hooks=[format_axis]) #format y-axis to financial notation
-        plots.append(curve)
-
-    interact_plot = plots[0]
-    for curve in plots[1:]:
-        interact_plot *= curve #add the curves on top of each other
-
-    plot_pane.object = interact_plot
-
 
 ##connecting button with run_simulation
 run_button.on_click(run_simulation)
