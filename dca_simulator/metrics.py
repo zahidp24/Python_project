@@ -5,23 +5,34 @@ import numpy_financial as npf
 def compute_KeyMetrics(df):
     """Computes all Key Metrics at once""" ######improve descrip
 
-    final_value = df["portf_value"].iloc[-1]
-    final_invested = df["invested_total"].iloc[-1]
-    ROI = (final_value/final_invested - 1)*100
+final_value = df["portf_value"].iloc[-1]
+final_invested = df["invested_total"].iloc[-1]
 
+start_date = df.index[0]
+end_date = df.index[-1]
+years = (end_date - start_date).days / 365
 
-    start_date = df.index[0]
-    end_date = df.index[-1]
-    years = (end_date - start_date).days/365 
-    CAGR = ((final_value/final_invested)**(1/years) - 1)*100
-    
+# ---- guards ----
+if final_invested <= 0:
+    ROI = float("nan")
+    CAGR = float("nan")
+else:
+    ROI = (final_value / final_invested - 1) * 100
+    if years <= 0:
+        CAGR = float("nan")
+    else:
+        CAGR = ((final_value / final_invested) ** (1 / years) - 1) * 100
+
 
     peak = df["portf_value"].cummax() #calc local peak
     drawdown = df["portf_value"]/peak - 1 #calc drawdown in current period
     max_drawdown = drawdown.min() * 100
 
 
-    calmar = CAGR/abs(max_drawdown)
+    if max_drawdown == 0 or pd.isna(CAGR):
+        calmar = float("nan")
+    else:
+        calmar = CAGR / abs(max_drawdown)
 
 
     cashflows = []
