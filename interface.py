@@ -26,34 +26,26 @@ stock_selection_mode = pn.widgets.RadioButtonGroup(options=["Ticker List", "Sect
 stock_selection_mode.value = None #no mode selected at the beginning
 
 def update_stock_selection(event):
-    ...
+    """Update the visibility of ticker selection widgets depending on stock selection mode"""
+    mode = event.new
+
+    ticker_list.visible = False
+    sector_selector.visible = False
+    ticker_text.visible = False
+
+    if mode == "Ticker List":
+        ticker_list_selector.options = top15_tickers
+        ticker_list_selector.value = [] #no ticker selected at the beginning
+        ticker_list.visible = True
+
+    elif mode == "Sector":
+        sector_selector.visible = True
+        ticker_list.visible = True
+
+    elif mode == "Manual Input":
+        ticker_text.visible = True
 stock_selection_mode.param.watch(update_stock_selection, 'value')
 
-# define tickers + widgets first
-top15_tickers = [...]
-ticker_list_selector = ...
-ticker_list = ...
-
-sector_tickers = {...}
-sector_selector = pn.widgets.Select(...)
-sector_selector.visible = False
-
-# NOW define pane + function + watchers
-sector_info_pane = pn.pane.Markdown("", visible=False, sizing_mode="stretch_width")
-
-def update_sector_info(event=None):
-    if stock_selection_mode.value == "Sector" and sector_selector.value:
-        n = len(sector_tickers[sector_selector.value])
-        sector_info_pane.object = (
-            f"**Sector mode:** Invest an equal amount every month into the current "
-            f"top **{n}** companies in the **{sector_selector.value}** sector."
-        )
-        sector_info_pane.visible = True
-    else:
-        sector_info_pane.visible = False
-
-stock_selection_mode.param.watch(update_sector_info, "value")
-sector_selector.param.watch(update_sector_info, "value")
 
 def get_selected_tickers(): 
     """Get the list of selected tickers based on the stock selection mode"""
@@ -150,7 +142,6 @@ strategy_info = {
 
 info_pane = pn.pane.Markdown("", sizing_mode="stretch_width")
 
-
 ##plot variable options
 plot_var_options = {
     "Portfolio Value ($)": "portf_value",
@@ -235,7 +226,6 @@ template = pn.template.FastListTemplate(title = "Retail Investment Strategy Back
     sidebar=[stock_selection_title,
              stock_selection_mode,
              sector_selector,
-             sector_info_pane,
              ticker_list,
              ticker_text, 
              start_date, 
@@ -348,9 +338,6 @@ def run_simulation(event=None):
     except Exception as e:
         error_pane.object = f"### ⚠️ Error: {e}"
         error_pane.visible = True
-        preview_pane.object = None
-        plot_pane.object = None
-        metrics_pane.object = None
         return
 
 ##connecting button with run_simulation
