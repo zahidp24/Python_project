@@ -13,7 +13,7 @@ def plot_profit_loss(*dfs, labels=None):
 
     plt.title("Profit/Loss Comparison")
     plt.xlabel("Date")
-    plt.ylabel("Profit/Loss ($ million)")
+    plt.ylabel("Profit/Loss ($)")
     plt.grid(False)
     plt.legend()
     plt.show()
@@ -32,7 +32,7 @@ def plot_portf_value(*dfs, labels=None):
 
     plt.title("Portfolio Value Comparison")
     plt.xlabel("Date")
-    plt.ylabel("Profit/Loss ($10s million)")
+    pplt.ylabel("Portfolio Value ($)")
     plt.grid(False)
     plt.legend()
     plt.show()  
